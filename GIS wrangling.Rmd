@@ -1,0 +1,85 @@
+---
+title: "GIS wrangling"
+output: html_document
+date: "2023-10-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+library(here)
+library(sf)
+library(tmap)
+
+```
+
+
+#Processing data: 
+I will be processing two sets of data: 
+- ESCCRP_FACTS_CLIP_231013_2008
+This file is all of the FACTS data from 2008 to 2022
+
+- ESCCRP_fire_history_CLIP_231013_2008
+This file is all the fire history in the area from 2008 to 2022
+
+I want to merge them together and then edit their attribute tables to be cohesive 
+```{r}
+#first I read in the data, so I can access it 
+
+FACTS <- st_read(here("ESCCRP_FACTS_CLIP_231013_2008","ESCCRP_FACTS_CLIP_231013_2008.shp"))
+
+FIRE <- st_read(here("fire","ESCCRP_fire_history_CLIP_231013_2008.shp"))
+
+#now I'm going to make both attribute tables match, and then combine the two shapefiles. First I'm going to work on the FACTS data
+
+
+
+
+
+# then I merge the layers
+shapefile_list <- list(FACTS, FIRE)
+Fire_facts_merged <- st_combine(shapefile_list)
+
+```
+This is the important information I want in my attribute table:
+
+
+
+```{r}
+
+
+
+
+ [1] "Wildfire - Natural Ignition"                             
+ [2] "Chipping of Fuels"                                       
+ [3] "Pruning to Raise Canopy Height and Discourage Crown Fire"
+ [4] "Precommercial Thin"                                      
+ [5] "Burning of Piled Material"                               
+ [6] "Yarding - Removal of Fuels by Carrying or Dragging"      
+ [7] "Piling of Fuels, Hand or Machine"                        
+ [8] "Commercial Thin"                                         
+ [9] "Thinning for Hazardous Fuels Reduction"                  
+[10] "Cover brush pile for burning"                            
+[11] "Compacting/Crushing of Fuels"                            
+[12] "Salvage Cut (intermediate treatment, not regeneration)"  
+[13] "Watershed Resource Non-Structural Improvements Riparian" 
+[14] "Sanitation Cut"                                          
+[15] "Invasives - Mechanical /Physical"                        
+[16] "Invasives - Pesticide Application"                       
+[17] "Fuel Break"                                              
+[18] "Disease Control"                                         
+[19] "Sensitive Species Protection"                            
+[20] "Broadcast Burning - Covers a majority of the unit"       
+[21] "Underburn - Low Intensity (Majority of Unit)"            
+[22] "Wildlife Habitat Slash treatment"                        
+[23] "Wildlife Habitat Mechanical treatment"                   
+[24] "Plant Trees"                                             
+[25] "Seedling cover crops or nursery crops"                   
+[26] "Insect Prevention"                                       
+[27] "TSI Certification - Thinning"                            
+[28] "TSI Need Created- Precommercial Thin"                    
+[29] "Wildlife Habitat Snags created"                          
+[30] "Disease Prevention"     
+```
+
