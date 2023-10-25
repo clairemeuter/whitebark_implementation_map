@@ -7,10 +7,11 @@ date: "2023-10-17"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-
+library(janitor)
 library(here)
 library(sf)
 library(tmap)
+
 
 ```
 
@@ -99,7 +100,10 @@ FACTS_cleaned <- FACTS %>%
 #now I want to create a new column in the Facts data that will sort the treatment as either fire treatment or a fuels treatment 
 #first I will make a list of fire activities and fuels activites
 
-fire_treatment <-c("Wildfire - Natural Ignition", "Burning of Piled Material","Broadcast Burning - Covers a majority of the unit","Underburn - Low Intensity (Majority of Unit)")
+fire_treatment <-c("Wildfire - Natural Ignition", 
+                   "Burning of Piled Material",
+                   "Broadcast Burning - Covers a majority of the unit",
+                   "Underburn - Low Intensity (Majority of Unit)")
 
 fuels_treatment <-c("Chipping of Fuels",
                     "Pruning to Raise Canopy Height and Discourage Crown Fire",
@@ -128,11 +132,14 @@ FACTS_cleaned <- FACTS_cleaned %>%
   mutate(YEAR_COMPL = substr(FACTS_cleaned$DATE_COMPL,1,4)) %>%
   mutate(treat_when = paste(FACTS_cleaned$treatment_type,FACTS_cleaned$YEAR_COMPL))
 #this function made years as a character but I need them as a numeric 
-FACTS_cleaned$YEAR_COMPL <- as.numeric(FACTS_cleaned$YEAR_COMPL) #changing from character to numeric
+FACTS_cleaned$YEAR_COMPL <- as.numeric(FACTS_cleaned$YEAR_COMPL) %>%  #changing from character to numeric
+ 
+
+
 
 #Now I export the shapefile for further analysis in Arc (merging layers)
 
-st_write(FACTS_cleaned,here("processed_data/Facts_edits/FACTS_cleaned_231017c/FACTS_cleaned_231017c.shp"))
+#st_write(FACTS_cleaned,here("processed_data/Facts_edits/FACTS_cleaned_231017c/FACTS_cleaned_231017c.shp"))
 ```
 
 #Making attribute tables the same for FIRE and FACTS
@@ -153,22 +160,82 @@ o Shovel ready
 o Planning
 o Ready for fire/prescribed fire (yellow-orange)
 o Completed
+
+## Building Attribute tables for FACTS and FIRE
+### Rebuilding FACTS data first
 ```{r}
+#First, I only want to keep the columns relevant to this project 
+
+# DATE_COMPL will become date_comp
+# YEAR_COMPL will become year_comp
+# NEPA_DOC_N will become nepa_doc
+# treatment_type will become treatment
+# FUND_CODE will become fund_source
+# COST_PER_U * NBR_UNITS_ will become cost
+# ACTIVITY will become activity
+
+FACTS_ready_merge <- FACTS_cleaned %>% 
+  select(date_comp = DATE_COMPL, #keeping columns i want and renaming them via new_name = old_name form
+         year_comp = YEAR_COMPL,
+         nepa_doc = NEPA_DOC_N,
+         treatment  = treatment_type,
+         fund_source = FUND_CODE,
+         activity = ACTIVITY, 
+         COST_PER_U, 
+         NBR_UNITS_,
+         shape_leng = SHAPE_Leng,
+         shape_area = SHAPE_Area) %>%
+  mutate(cost =COST_PER_U*NBR_UNITS_,.after=activity) %>% 
+   #multiplying cost per unit by number of units to find the overall cost 
+  select(!c(COST_PER_U,NBR_UNITS_)) 
+# removing COST_PER_U & NBR_UNITS_
+
+
+#FACTS_ready_merge is ready to be joined with my FIRE data, now I just need to configure the FIRE data the same 
 
 ```
 
 
-
-
-
-
-
-#I now combine the two dataset
+### Rebuilding FIRE data
 ```{r}
+#First, I only want the columns to match FACTS_ready_merge
+
+# DATE_COMPL will become date_comp
+# YEAR_COMPL will become year_comp
+# NEPA_DOC_N will become nepa_doc
+# treatment_type will become treatment
+# FUND_CODE will become fund_source
+# COST_PER_U * NBR_UNITS_ will become cost
+# ACTIVITY will become activity
+
+FIRE_ready_merge <- FIRE %>% 
+  select(date_comp = CONT_DATE, #keeping columns i want and renaming them via new_name = old_name form
+         year_comp = YEAR_,
+         fund_source = AGENCY,
+         shape_leng = SHAPE_Leng,
+         shape_area = Shape_Area) %>%
+  mutate(nepa_doc = "Wildfire", .after = year_comp)%>% #adding nepa_doc column, .after argument places it on table in correct place
+  mutate(treatment = "Fire Treatment", .after  =nepa_doc) %>%
+  mutate(activity = "Wildfire", .after = fund_source) %>%
+  mutate(cost = 0, .after = activity)
+  
 
 
-rbind()
-FIRE_FUELS_join <- st_union(FACTS_cleaned, FIRE, by = geometry, by_feature = FALSE)
+
+#Now I can merge these two datasets together
+#using rbind()
+
+combined_FACTS_FIRE <- rbind(FIRE_ready_merge,FACTS_ready_merge)
+
+#Now I can export this completed data set to AGOL
+#st_write(combined_FACTS_FIRE,here("processed_data/FACTS_FIRE_COMBINED/FACTS_FIRE_COMBINED_231025/FACTS_FIRE_COMBINED_231025.shp"))
+
+#This threw an error so i converted my data to 2d
+combined_FACTS_FIRE_2d <- st_zm(combined_FACTS_FIRE, drop = TRUE)
+
+st_write(combined_FACTS_FIRE_2d,here("processed_data/FACTS_FIRE_COMBINED/FACTS_FIRE_COMBINED_231025/FACTS_FIRE_COMBINED_231025.shp"))
 ```
+
+
 
 
