@@ -36,50 +36,139 @@ FIRE <- st_read(here("fire","ESCCRP_fire_history_CLIP_231013_2008.shp"))
 
 
 
-
-# then I merge the layers
-shapefile_list <- list(FACTS, FIRE)
-Fire_facts_merged <- st_combine(shapefile_list)
-
 ```
 This is the important information I want in my attribute table:
+ATTRIBUTE DATA
+-	Dominant Funding Source: 
+-	Lead partner: National Forest Foundation, California Deer Association, Whitebark Institute…. 
+-	Environmental Compliance Document: Three Creeks (NEPA), Reds Meadow , ESCCRP, Timber Harvest Plan (Non-Federal). 
+-	Estimated Cost: 
+-	Actual Cost: 
+-	Treatment Type: Forest Health, Fuels Reduction
+-	Treatment Date 
+-	FRID: fire within five years of treatment 
+-	Year of treatment 
+-	Expected year of re-entry 
+-	Status
+o	Shovel ready 
+o	Planning
+o	Ready for fire/prescribed fire (yellow-orange) 
+o	Completed 
+
+
+Not all of the data in FACTS is relevant to us, so I'm removing row's with activities I don't think are realevant, listed below: 
+# [12] "Salvage Cut (intermediate treatment, not regeneration)" 
+# [13] "Watershed Resource Non-Structural Improvements Riparian"
+# [14] "Sanitation Cut"                                         
+# [15] "Invasives - Mechanical /Physical"                       
+# [16] "Invasives - Pesticide Application"  
+# [18] "Disease Control"                                        
+# [19] "Sensitive Species Protection"
+# [22] "Wildlife Habitat Slash treatment"                       
+# [23] "Wildlife Habitat Mechanical treatment"                  
+# [24] "Plant Trees"                                            
+# [25] "Seedling cover crops or nursery crops"                  
+# [26] "Insect Prevention"                                      
+# [27] "TSI Certification - Thinning"                           
+# [28] "TSI Need Created- Precommercial Thin"                   
+# [29] "Wildlife Habitat Snags created"                         
+# [30] "Disease Prevention"
+```{r}
+# I can use a reverse filter to get this effect 
+
+FACTS_cleaned <- FACTS %>% 
+  filter(ACTIVITY != "Salvage Cut (intermediate treatment, not regeneration)") %>%
+  filter(ACTIVITY != "Watershed Resource Non-Structural Improvements Riparian") %>%
+  filter(ACTIVITY != "Sanitation Cut") %>%
+  filter(ACTIVITY != "Invasives - Mechanical /Physical") %>%
+  filter(ACTIVITY != "Invasives - Pesticide Application") %>%
+  filter(ACTIVITY != "Disease Control") %>%
+  filter(ACTIVITY != "Sensitive Species Protection") %>%
+  filter(ACTIVITY != "Wildlife Habitat Slash treatment") %>%
+  filter(ACTIVITY != "Wildlife Habitat Mechanical treatment") %>%
+  filter(ACTIVITY != "Plant Trees") %>%
+  filter(ACTIVITY != "Seedling cover crops or nursery crops") %>%
+  filter(ACTIVITY != "Insect Prevention") %>%
+  filter(ACTIVITY != "TSI Certification - Thinning") %>%
+  filter(ACTIVITY != "TSI Need Created- Precommercial Thin") %>%
+  filter(ACTIVITY != "Wildlife Habitat Snags created") %>%
+  filter(ACTIVITY != "Disease Prevention")
+
+#I can look at unique(FACTS_cleaned$ACTIVITY) to see what is left in the data
+
+#now I want to create a new column in the Facts data that will sort the treatment as either fire treatment or a fuels treatment 
+#first I will make a list of fire activities and fuels activites
+
+fire_treatment <-c("Wildfire - Natural Ignition", "Burning of Piled Material","Broadcast Burning - Covers a majority of the unit","Underburn - Low Intensity (Majority of Unit)")
+
+fuels_treatment <-c("Chipping of Fuels",
+                    "Pruning to Raise Canopy Height and Discourage Crown Fire",
+                    "Precommercial Thin",
+                    "Yarding - Removal of Fuels by Carrying or Dragging",
+                    "Piling of Fuels, Hand or Machine",
+                    "Commercial Thin",
+                    "Thinning for Hazardous Fuels Reduction",
+                    "Cover brush pile for burning",
+                    "Compacting/Crushing of Fuels",
+                    "Fuel Break")
+
+
+FACTS_cleaned <- FACTS_cleaned %>%
+  mutate(treatment_type = case_when(
+    ACTIVITY %in% fire_treatment ~ "Fire Treatment",
+    ACTIVITY %in% fuels_treatment ~ "Fuels Treatment",
+    TRUE ~ "Other Treatment"
+  ))
 
 
 
+#now I want to create a column called treat_when Where I will pull from my treatment column to find if the treatment was fuel or fire, and then I'll pull from my DATE_COMPL column to get the year it was completed. So a row with a treatment of fuel in 2017 would get fuel_2017 in the new treat_when column. 
+
+FACTS_cleaned <- FACTS_cleaned %>% 
+  mutate(YEAR_COMPL = substr(FACTS_cleaned$DATE_COMPL,1,4)) %>%
+  mutate(treat_when = paste(FACTS_cleaned$treatment_type,FACTS_cleaned$YEAR_COMPL))
+#this function made years as a character but I need them as a numeric 
+FACTS_cleaned$YEAR_COMPL <- as.numeric(FACTS_cleaned$YEAR_COMPL) #changing from character to numeric
+
+#Now I export the shapefile for further analysis in Arc (merging layers)
+
+st_write(FACTS_cleaned,here("processed_data/Facts_edits/FACTS_cleaned_231017c/FACTS_cleaned_231017c.shp"))
+```
+
+#Making attribute tables the same for FIRE and FACTS
+ATTRIBUTE DATA
+- Dominant Funding Source: =(FUND_CO for FACTS)
+- Lead partner: National Forest Foundation, California Deer Association, Whitebark Institute….
+- Environmental Compliance Document: Three Creeks (NEPA), Reds Meadow , ESCCRP, Timber Harvest Plan (Non-Federal).= (NEPA_DO for FACTS)
+
+- Estimated Cost:
+- Actual Cost:
+- Treatment Type: Forest Health, Fuels Reduction
+- Treatment Date = (DATE_CO for FACTS) 
+- FRID: fire within five years of treatment
+- Year of treatment
+- Expected year of re-entry
+- Status
+o Shovel ready
+o Planning
+o Ready for fire/prescribed fire (yellow-orange)
+o Completed
+```{r}
+
+```
+
+
+
+
+
+
+
+#I now combine the two dataset
 ```{r}
 
 
-
-
- [1] "Wildfire - Natural Ignition"                             
- [2] "Chipping of Fuels"                                       
- [3] "Pruning to Raise Canopy Height and Discourage Crown Fire"
- [4] "Precommercial Thin"                                      
- [5] "Burning of Piled Material"                               
- [6] "Yarding - Removal of Fuels by Carrying or Dragging"      
- [7] "Piling of Fuels, Hand or Machine"                        
- [8] "Commercial Thin"                                         
- [9] "Thinning for Hazardous Fuels Reduction"                  
-[10] "Cover brush pile for burning"                            
-[11] "Compacting/Crushing of Fuels"                            
-[12] "Salvage Cut (intermediate treatment, not regeneration)"  
-[13] "Watershed Resource Non-Structural Improvements Riparian" 
-[14] "Sanitation Cut"                                          
-[15] "Invasives - Mechanical /Physical"                        
-[16] "Invasives - Pesticide Application"                       
-[17] "Fuel Break"                                              
-[18] "Disease Control"                                         
-[19] "Sensitive Species Protection"                            
-[20] "Broadcast Burning - Covers a majority of the unit"       
-[21] "Underburn - Low Intensity (Majority of Unit)"            
-[22] "Wildlife Habitat Slash treatment"                        
-[23] "Wildlife Habitat Mechanical treatment"                   
-[24] "Plant Trees"                                             
-[25] "Seedling cover crops or nursery crops"                   
-[26] "Insect Prevention"                                       
-[27] "TSI Certification - Thinning"                            
-[28] "TSI Need Created- Precommercial Thin"                    
-[29] "Wildlife Habitat Snags created"                          
-[30] "Disease Prevention"     
+rbind()
+FIRE_FUELS_join <- st_union(FACTS_cleaned, FIRE, by = geometry, by_feature = FALSE)
 ```
+
 
