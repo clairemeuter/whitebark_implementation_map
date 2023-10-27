@@ -1,0 +1,75 @@
+---
+title: "present_future_GIS"
+author: "Claire Meuter"
+date: "2023-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(janitor)
+library(here)
+library(sf)
+library(tmap)
+```
+
+# First I read in the priority acres shapefile 230809_Priority_Acres_Whitebark_v2
+
+```{r}
+
+priority_acres <- st_read(here("230809_Priority_Acres_Whitebark_v2","230809_Priority_Acres_Whitebark_v2.shp"))
+
+
+```
+# per talking with Claire Freeman, I want my data to have the following columns 
+POD ID,	POD Acres,	Unit ID,	Unit Acres,	Estimated Cost,	Actual Cost,	Funded, 	Funder,	Timber Unit Verifed,	Year Completed ,	Actual Cost, 	Implementation Status,	Completed Fire,	Completed Fuel Reduction,	Completed  Restoration,	SDI Before,	SDI After,	Environmental Compliance, 	Project Name, 	Expected year of Re-entry, 	FRID 
+
+
+Note: 999999 will be the no data value so that columns can be filled in later
+
+```{r}
+#I use colnames(priority_acres) to see the columns names this df currently has:
+colnames(priority_acres)
+```
+
+[1] "UnitNumber" "Ops_Imp_Pr" "Priority_c" "Acres_2306" "Shape_Leng"
+[6] "GlobalID"   "Shape_Le_1" "Shape_Area" "geometry" 
+Per the metadata for this dataset: 
+UnitNumber = Fire/timber unit
+Ops_Imp_Prior = Implementation priority number (1= highest priority)
+Priority Category = Order of priority by category with highest to lowest priority as follows: Highest, Very High, High, Moderate, Low
+Acres_230614 = acres of each unit calculated on 6/14/23
+
+
+I will use the #mutate() function to add and rename columns
+POD ID,	POD Acres,	Unit ID,	Unit Acres,Year Completed,	Estimated Cost,	Actual Cost,	Funded, 	Funder,	Timber Unit Verifed, Implementation Status,	Completed Fire,	Completed Fuel Reduction,	Completed  Restoration,	SDI Before,	SDI After,	Environmental Compliance, 	Project Name, 	Expected year of Re-entry, 	FRID 
+```{r}
+
+priority_acres_new_columns <- priority_acres %>%
+  mutate(POD_ID = 999999, .before = UnitNumber) %>%
+  mutate(POD_acres = 999999, .before = UnitNumber) %>%
+  #keeping columns i want and renaming them via new_name = old_name form\/
+  mutate(unit_acres = Acres_2306, .after = UnitNumber) %>%
+  mutate(year_comp =999999, .after = unit_acres) %>%
+  mutate(est_cost = 999999, .after = year_comp) %>%
+  mutate(act_cost = 999999, .after = est_cost) %>%
+  mutate(funded = "No", .after = act_cost) %>%
+  mutate(funder = "none", .after = funded) %>%
+  mutate(tim_unit_ver = "yes", .after = funder) %>%
+  mutate(implmnt_status = "Environmental Planning", .after = tim_unit_ver) %>%
+  mutate(compl_fire = "no", .after =implmnt_status) %>%
+  mutate(compl_fuel = "no", .after = compl_fire) %>%
+  mutate(compl_rest = "no", .after = compl_fuel) %>%
+  mutate(SDI_before = 999999, .after = compl_rest) %>%
+  mutate(SDI_after = 999999, .after = SDI_before) %>%
+  mutate(Env_comp_doc = "ESCCRP NEPA", .after = SDI_after) %>%
+  mutate(project_name = "ESCCRP", .after = Env_comp_doc) %>%
+  mutate(ex_yr_reentry = 999999, .after = project_name) %>%
+  mutate(FRID = 999999, .after = ex_yr_reentry) %>%
+  select(!c(Acres_2306,Ops_Imp_Pr)) #removing columns I no longer want
+
+
+```
+
+
