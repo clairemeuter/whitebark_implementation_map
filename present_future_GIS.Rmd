@@ -43,7 +43,8 @@ Acres_230614 = acres of each unit calculated on 6/14/23
 
 
 I will use the #mutate() function to add and rename columns
-POD ID,	POD Acres,	Unit ID,	Unit Acres,Year Completed,	Estimated Cost,	Actual Cost,	Funded, 	Funder,	Timber Unit Verifed, Implementation Status,	Completed Fire,	Completed Fuel Reduction,	Completed  Restoration,	SDI Before,	SDI After,	Environmental Compliance, 	Project Name, 	Expected year of Re-entry, 	FRID 
+Addind the following columns: POD ID,	POD Acres,	Unit ID,	Unit Acres,Year Completed,	Estimated Cost,	Actual Cost,	Funded, 	Funder,	lead partner, Timber Unit Verifed,  Status,	Completed Fire,	Completed Fuel Reduction,	Completed  Restoration,	SDI Before,	SDI After,	Environmental Compliance, 	Project Name, 	Expected year of Re-entry, 	FRID 
+#Mutating priority Acres
 ```{r}
 
 priority_acres_new_columns <- priority_acres %>%
@@ -56,9 +57,10 @@ priority_acres_new_columns <- priority_acres %>%
   mutate(act_cost = 999999, .after = est_cost) %>%
   mutate(funded = "No", .after = act_cost) %>%
   mutate(funder = "none", .after = funded) %>%
-  mutate(tim_unit_ver = "yes", .after = funder) %>%
-  mutate(implmnt_status = "Environmental Planning", .after = tim_unit_ver) %>%
-  mutate(compl_fire = "no", .after =implmnt_status) %>%
+  mutate(ld_partner = "none", .after = funder) %>%
+  mutate(tim_unit_ver = "yes", .after = ld_partner) %>%
+  mutate(status = "Environmental Planning", .after = tim_unit_ver) %>%
+  mutate(compl_fire = "no", .after =status) %>%
   mutate(compl_fuel = "no", .after = compl_fire) %>%
   mutate(compl_rest = "no", .after = compl_fuel) %>%
   mutate(SDI_before = 999999, .after = compl_rest) %>%
@@ -67,9 +69,242 @@ priority_acres_new_columns <- priority_acres %>%
   mutate(project_name = "ESCCRP", .after = Env_comp_doc) %>%
   mutate(ex_yr_reentry = 999999, .after = project_name) %>%
   mutate(FRID = 999999, .after = ex_yr_reentry) %>%
-  select(!c(Acres_2306,Ops_Imp_Pr)) #removing columns I no longer want
+  select(!c(Acres_2306,Ops_Imp_Pr,Priority_c,Shape_Leng, GlobalID, Shape_Le_1, Shape_Area)) #removing columns I no longer want
+
+priority_acres_new_columns <- st_zm(priority_acres_new_columns, drop = TRUE)
+
+st_write(priority_acres_new_columns,here("processed_data/priority_acres_new_columns//priority_acres_new_columns.shp"))
+
+```
+
+
+# Reading and Mutating  the City Parcels: 
+- Bell Shaped 
+- Camp High Sierra
+- Mammoth Creek Parcels 
+```{r}
+
+BellShapedParcel <- st_read(here("BellShapedParcel","BellShapedParcel.shp"))
+
+#I use colnames(BellShapedParcel) to see the columns names this df currently has:
+#colnames(BellShapedParcel) #[1] "CalcAcres"  "ParcelName" "LandOwner"  "geometry"
+
+CampHighSierra <-  st_read(here("CampHighSierra","CampHighSierra.shp"))
+
+MammothCreekParcels <- st_read(here("MammothCreekParcels","MammothCreekParcels.shp"))
+
+# iInce all three shps have the same column names currently, I'll merge them and then mutate them all at once for ease
+
+#code to merge them 
+city_parcels <- rbind(BellShapedParcel,CampHighSierra, MammothCreekParcels)
+
+
+
+#now I mutate the city parcels to match the column format of the new priority acres
+
+city_parcels_new_columns <- city_parcels %>%
+  mutate(POD_ID = 999999, .before = CalcAcres) %>%
+  mutate(POD_acres = 999999, .before = CalcAcres) %>%
+  #keeping columns i want and renaming them via new_name = old_name form\/
+  mutate(UnitNumber = ParcelName, .after = POD_acres) %>%
+  mutate(unit_acres = CalcAcres, .after = UnitNumber) %>%
+  mutate(year_comp =2023, .after = unit_acres) %>%
+  mutate(est_cost = 999999, .after = year_comp) %>%
+  mutate(act_cost = 999999, .after = est_cost) %>%
+  mutate(funded = "No", .after = act_cost) %>%
+  mutate(funder = "CalFIRE", .after = funded) %>%
+  mutate(ld_partner = "Town of Mammoth Lakes", .after = funder) %>%
+  mutate(tim_unit_ver = "yes", .after = ld_partner) %>%
+  mutate(status = "Completed", .after = tim_unit_ver) %>%
+  mutate(compl_fire = "no", .after =status) %>%
+  mutate(compl_fuel = "no", .after = compl_fire) %>%
+  mutate(compl_rest = "no", .after = compl_fuel) %>%
+  mutate(SDI_before = 999999, .after = compl_rest) %>%
+  mutate(SDI_after = 999999, .after = SDI_before) %>%
+  mutate(Env_comp_doc = "CEQA", .after = SDI_after) %>%
+  mutate(project_name = "ESCCRP", .after = Env_comp_doc) %>%
+  mutate(ex_yr_reentry = 999999, .after = project_name) %>%
+  mutate(FRID = 999999, .after = ex_yr_reentry) %>%
+  select(!c(CalcAcres,ParcelName,LandOwner)) #removing columns I no longer want
+```
+
+# Reading and mutating the Reds Meadow project area 
+```{r}
+#read in the Reds meadow data
+
+Reds_meadow <- st_read(here("230608_Reds_Meadow_NEPA_INF","Reds_Meadow.shp"))
+
+# colnames(Reds_meadow)
+# [1] "NEPA_v2"    "area_acreM" "Shape_Leng" "Shape_Area" "geometry"  
+#now I mutate the city parcels to match the column format of the new priority acres
+
+Reds_meadow_new_column <- Reds_meadow %>%
+  mutate(POD_ID = 999999, .before = NEPA_v2) %>%
+  mutate(POD_acres = 999999, .before = NEPA_v2) %>%
+  #keeping columns i want and renaming them via new_name = old_name form\/
+  mutate(UnitNumber = NEPA_v2, .after = POD_acres) %>%
+  mutate(unit_acres = area_acreM, .after = UnitNumber) %>%
+  mutate(year_comp =999999, .after = unit_acres) %>%
+  mutate(est_cost = 999999, .after = year_comp) %>%
+  mutate(act_cost = 999999, .after = est_cost) %>%
+  mutate(funded = "No", .after = act_cost) %>%
+  mutate(funder = "none", .after = funded) %>%
+  mutate(ld_partner = "None", .after = funder) %>%
+  mutate(tim_unit_ver = "yes", .after = ld_partner) %>%
+  mutate(status = "In Progress", .after = tim_unit_ver) %>%
+  mutate(compl_fire = "no", .after =status) %>%
+  mutate(compl_fuel = "no", .after = compl_fire) %>%
+  mutate(compl_rest = "no", .after = compl_fuel) %>%
+  mutate(SDI_before = 999999, .after = compl_rest) %>%
+  mutate(SDI_after = 999999, .after = SDI_before) %>%
+  mutate(Env_comp_doc = "Reds Meadow NEPA", .after = SDI_after) %>%
+  mutate(project_name = "Reds Meadow", .after = Env_comp_doc) %>%
+  mutate(ex_yr_reentry = 999999, .after = project_name) %>%
+  mutate(FRID = 999999, .after = ex_yr_reentry) %>%
+  select(!c(NEPA_v2,area_acreM,Shape_Leng,Shape_Area)) #removing columns I no longer want
+
+```
+
+
+
+# Reading in, clipping,  mutating Three Creeks
+The three creeks project actually goes outside of the esccrp landscape boundary, so I'm going to clip it to the ESCCRP boundary shapefile first
+
+
+```{r}
+#read in three creeks
+ThreeCreeks <- st_read(here("230530_ThreeCreeks_modified_Boyd_Whitebark", "ThreeCreeks_Modified_230520.shp"))
+
+#read in the esccrp boundary 
+
+ESCCRP_boundary <- st_read(here("230630_ESCCRP_boundary_ALL", "ESCCRP_boundary_ALL_230630.shp"))
+
+#clipping the Three_Creeks to only fall inside ESCCRP boundary
+
+clipped_ThreeCreeks <- st_intersection(ThreeCreeks, ESCCRP_boundary) 
+
+clipped_ThreeCreeks$Sub_Unit <- as.numeric(clipped_ThreeCreeks$Sub_Unit) 
+
+clipped_ThreeCreeks$FACTS_ID <- as.numeric(clipped_ThreeCreeks$FACTS_ID)
+  #now I'm mutating the three creeks data to combine the #FACTS_ID and #Sub_Unit columns so that each unit has it's own unique FID 
+  #I'll just add the FACTS ID and Sub Units together, then each polygon will have its own #unit number NOTE: I had to change the FACTS ID and sub_unit to numeric, depending on the data this is not always advisable 
+clipped_ThreeCreeks <- clipped_ThreeCreeks %>%
+  mutate(UnitNumber = FACTS_ID + Sub_Unit, .before = Acres)
+
+
+#Looking at the current column names of clipped_ThreeCreeks
+#colnames(clipped_ThreeCreeks)
+#  [1] "UnitNumber"   "Acres"        "REGION"       "ADMIN"        "RDIST"       
+#  [6] "COMPART"      "STAND_NO_"    "FACTS_ID"     "Status"       "Sub_Unit"    
+# [11] "Strata"       "Plantation"   "ID"           "TW_cat"       "Shape_Leng"  
+# [16] "Shape_Area"   "Shape_Leng.1" "Shape_Area.1" "Acres_2306"   "geometry"    
+
+
+
+clipped_ThreeCreeks_new_column <- clipped_ThreeCreeks %>%
+  mutate(POD_ID = 999999, .before = UnitNumber) %>%
+  mutate(POD_acres = 999999, .before = UnitNumber) %>%
+  #keeping columns i want and renaming them via new_name = old_name form\/
+  mutate(unit_acres = Acres, .after = UnitNumber) %>%
+  mutate(year_comp =999999, .after = unit_acres) %>%
+  mutate(est_cost = 999999, .after = year_comp) %>%
+  mutate(act_cost = 999999, .after = est_cost) %>%
+  mutate(funded = "No", .after = act_cost) %>%
+  mutate(funder = "none", .after = funded) %>%
+  mutate(ld_partner = "None", .after = funder) %>%
+  mutate(tim_unit_ver = "yes", .after = ld_partner) %>%
+  mutate(status = "Shovel Ready", .after = tim_unit_ver) %>%
+  mutate(compl_fire = "no", .after =status) %>%
+  mutate(compl_fuel = "no", .after = compl_fire) %>%
+  mutate(compl_rest = "no", .after = compl_fuel) %>%
+  mutate(SDI_before = 999999, .after = compl_rest) %>%
+  mutate(SDI_after = 999999, .after = SDI_before) %>%
+  mutate(Env_comp_doc = "Three Creeks NEPA", .after = SDI_after) %>%
+  mutate(project_name = "Three Creeks", .after = Env_comp_doc) %>%
+  mutate(ex_yr_reentry = 999999, .after = project_name) %>%
+  mutate(FRID = 999999, .after = ex_yr_reentry) %>%
+  select(!c(REGION,ADMIN,RDIST,COMPART,STAND_NO_,FACTS_ID,Status,Sub_Unit,Strata,Plantation,ID,TW_cat,Shape_Leng,Shape_Area,Shape_Leng.1,Shape_Area.1, Acres_2306, Acres)) #removing columns I no longer want
 
 
 ```
 
+## Adding, clipping, and mutating federal units_public 
+I am only keeping the federal unit that falls outside of the priority acre units, because the other ones I will update manually by updating the attribute table for the units they fall in 
+```{r}
+#first I read in the data
+federal_units <- st_read(here("2023_Federal_units","2023_Federal_Units_PUBLIC.shp"))
+# Now I'm only keeping the units that fall outside of the priority acres (I think only one will be left)
+
+# i want to keep the row that has a Shape_Area = 3510200.9
+
+federal_units_clipped <- federal_units %>%
+  filter(Shape_Area > 3510200)
+
+#notice that the Acres column is not accurate, so I'm going to use mutate to rewrite that column with correct acres
+
+#Convert the area from square meters to acres. One acre is equal to 4046.86 square meters.
+#I'm also going to add the other rows for this 
+federal_units_clipped_new_columns <- federal_units_clipped %>%
+  mutate(unit_acres = federal_units_clipped$Shape_Area/4046.86) %>%
+  #adding the other columns
+  mutate(POD_ID =	"LowerDeadman", .before = Acres) %>%
+  mutate(POD_acres = 	"6,461.61", .before = Acres) %>%
+  mutate(UnitNumber=	"00LWDM00001", before = Acres) %>%
+  mutate(unit_acres = unit_acres, .after = UnitNumber) %>%
+  mutate(year_comp =999999, .after = unit_acres) %>%
+  mutate(est_cost = 999999, .after = year_comp) %>%
+  mutate(act_cost = 999999, .after = est_cost) %>%
+  mutate(funded = "No", .after = act_cost) %>%
+  mutate(funder = "none", .after = funded) %>%
+  mutate(ld_partner = "None", .after = funder) %>%
+  mutate(tim_unit_ver = "yes", .after = ld_partner) %>%
+  mutate(status = "Environmental Planning", .after = tim_unit_ver) %>%
+  mutate(compl_fire = "no", .after =status) %>%
+  mutate(compl_fuel = "no", .after = compl_fire) %>%
+  mutate(compl_rest = "no", .after = compl_fuel) %>%
+  mutate(SDI_before = 999999, .after = compl_rest) %>%
+  mutate(SDI_after = 999999, .after = SDI_before) %>%
+  mutate(Env_comp_doc = "Sherwin2Scenic", .after = SDI_after) %>%
+  mutate(project_name = "Sherwin2Scenic", .after = Env_comp_doc) %>%
+  mutate(ex_yr_reentry = 999999, .after = project_name) %>%
+  mutate(FRID = 999999, .after = ex_yr_reentry) %>%
+  select(c(POD_ID,POD_acres,UnitNumber,unit_acres,year_comp,est_cost,act_cost,funded,funder,ld_partner,tim_unit_ver,status,compl_fire,compl_fuel,compl_rest,SDI_before, SDI_after, Env_comp_doc, project_name, ex_yr_reentry, FRID)) #only keeping columns I  want
+  
+
+```
+## manually editing rows in priority_acres_new_columns
+3 units I need to edit
+Lakes Basin Hazard Fuels
+Thr
+
+
+# Knit everything together into one shapefile 
+
+```{r}
+city_parcels_new_columns <- st_transform(city_parcels_new_columns, crs = st_crs(3857))
+Reds_meadow_new_column <- st_transform(Reds_meadow_new_column, crs = st_crs(3857))
+clipped_ThreeCreeks_new_column <- st_transform(clipped_ThreeCreeks_new_column, crs = st_crs(3857))
+federal_units_clipped_new_columns <- st_transform(federal_units_clipped_new_columns, crs = st_crs(3857))
+
+combined_future_impl <- rbind(priority_acres_new_columns, city_parcels_new_columns, Reds_meadow_new_column, clipped_ThreeCreeks_new_column, federal_units_clipped_new_columns)
+# crs we want ID["EPSG",3857]]
+```
+
+#export new shapefile 
+```{r}
+combined_future_impl <- st_zm(combined_future_impl, drop = TRUE)
+
+st_write(combined_future_impl,here("processed_data/combined_future_impl/combined_future_impl.shp"))
+
+```
+#10/30/2024 work
+Leaving federal units out, combine priority acres, city parcels, reds meadow, three creeks, leave out federal units
+Then I'll erase timber units by this new shapefile to get partial timber unit data
+process timber unit data and join to data 
+
+```{r}
+#combine priority acres, city parcels, reds meadow, three creeks, leave out federal units
+combined_future_no_fed <- rbind(priority_acres_new_columns, city_parcels_new_columns, Reds_meadow_new_column, clipped_ThreeCreeks_new_column)
+# crs we want ID["EPSG",3857]]
+```
 
