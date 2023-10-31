@@ -238,4 +238,3 @@ st_write(combined_FACTS_FIRE_2d,here("processed_data/FACTS_FIRE_COMBINED/FACTS_F
 
 
 
-
